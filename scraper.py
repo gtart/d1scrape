@@ -1,10 +1,6 @@
 # scraper.py
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
@@ -12,33 +8,22 @@ import time
 def scrape_daltile_lvt():
     url = "https://www.daltile.com/lvt"
 
-    # Set up headless Chrome for Replit
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run Chrome invisibly
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(url)
+        page.wait_for_timeout(5000)  # wait 5 seconds for JS to load
 
-    # Set up ChromeDriver service correctly
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+        html = page.content()
+        browser.close()
 
-    print("🌐 Loading page...")
-    driver.get(url)
+    soup = BeautifulSoup(html, 'html.parser')
 
-    # Wait for JavaScript to load
-    time.sleep(5)
-
-    # Grab fully rendered HTML
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-
-    # Find all products
     products = soup.find_all('div', class_='search-result-item')
-
-    print(f"🔎 Found {len(products)} products on page.")
 
     scraped_data = []
 
-    for product in products[:50]:  # Limit to first 50 products
+    for product in products[:50]:  # limit to first 50 products
         try:
             name_tag = product.find('div', class_='search-result-product-name')
             name = name_tag.get_text(strip=True) if name_tag else "No Name"
@@ -54,11 +39,10 @@ def scrape_daltile_lvt():
         except Exception as e:
             print(f"⚠️ Error parsing a product: {e}")
 
-    driver.quit()
     return scraped_data
 
 def main():
-    print("🚀 Starting Daltile LVT scraper...")
+    print("🚀 Starting Daltile LVT scraper with Playwright...")
     all_data = scrape_daltile_lvt()
 
     if all_data:

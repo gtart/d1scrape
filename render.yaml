@@ -1,0 +1,8 @@
+services:
+  - type: cron
+    name: daltile-scraper
+    schedule: "@daily"
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python3 scraper.py"
